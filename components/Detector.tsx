@@ -258,10 +258,6 @@ function IdleHero() {
           );
         })}
       </div>
-
-      <p className="text-[11px] uppercase tracking-[0.18em] text-muted">
-        Tap play to start
-      </p>
     </div>
   );
 }

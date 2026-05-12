@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { PlayIcon, SlidersIcon, StopIcon } from "@/components/Icons";
 import type { ModelId } from "@/lib/models";
 
@@ -78,6 +78,7 @@ export default function ControlDock({
             step={0.05}
             onChange={onConfidenceChange}
             format={(v) => `${Math.round(v * 100)}%`}
+            info="Minimum score a detection needs to show up. Higher = fewer, more certain boxes."
           />
           <Slider
             label="IoU"
@@ -87,6 +88,7 @@ export default function ControlDock({
             step={0.05}
             onChange={onIouChange}
             format={(v) => v.toFixed(2)}
+            info="How much overlap before duplicate boxes get merged. Lower = fewer duplicates."
           />
         </div>
       )}
@@ -167,6 +169,7 @@ function Slider({
   step,
   onChange,
   format,
+  info,
 }: {
   label: string;
   value: number;
@@ -175,12 +178,50 @@ function Slider({
   step: number;
   onChange: (v: number) => void;
   format: (v: number) => string;
+  info?: string;
 }) {
   const pct = ((value - min) / (max - min)) * 100;
+  const [showInfo, setShowInfo] = useState(false);
+  const wrapRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!showInfo) return;
+    const onDoc = (e: MouseEvent) => {
+      if (!wrapRef.current?.contains(e.target as Node)) setShowInfo(false);
+    };
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, [showInfo]);
+
   return (
     <label className="block">
       <div className="mb-1.5 flex items-center justify-between">
-        <span className="text-xs font-medium text-muted">{label}</span>
+        <div ref={wrapRef} className="relative flex items-center gap-1.5">
+          <span className="text-xs font-medium text-muted">{label}</span>
+          {info && (
+            <>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  setShowInfo((v) => !v);
+                }}
+                aria-label={`About ${label}`}
+                className="hairline grid h-4 w-4 place-items-center rounded-full bg-surface text-[9px] font-semibold leading-none text-muted transition-colors hover:text-fg"
+              >
+                i
+              </button>
+              {showInfo && (
+                <div
+                  role="tooltip"
+                  className="hairline absolute left-0 top-full z-30 mt-1.5 w-56 rounded-lg bg-surface2 p-2.5 text-[11px] leading-snug text-fg shadow-lg"
+                >
+                  {info}
+                </div>
+              )}
+            </>
+          )}
+        </div>
         <span className="tabular text-xs font-semibold text-fg">{format(value)}</span>
       </div>
       <input
