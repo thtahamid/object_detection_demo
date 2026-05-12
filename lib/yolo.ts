@@ -40,7 +40,13 @@ export class YoloDetector {
 
   async load(modelUrl: string, onProgress?: (pct: number) => void): Promise<void> {
     ortRuntime.env.wasm.wasmPaths = "/ort/";
-    ortRuntime.env.wasm.numThreads = 1;
+    // Threading needs cross-origin isolation (set via COOP/COEP in next.config.mjs).
+    // Kept single-threaded in dev because next dev mis-bundles ORT's worker URL —
+    // next build resolves it correctly, so prod can use every core.
+    const isolated = typeof crossOriginIsolated !== "undefined" && crossOriginIsolated;
+    const isProd = process.env.NODE_ENV === "production";
+    ortRuntime.env.wasm.numThreads =
+      isProd && isolated ? Math.min(navigator.hardwareConcurrency ?? 4, 8) : 1;
     ortRuntime.env.logLevel = "error";
 
     const buf = await fetchWithProgress(modelUrl, onProgress);
@@ -54,9 +60,10 @@ export class YoloDetector {
     console.info("[ort]", {
       requestedEPs: ["webgpu", "wasm"],
       numThreads: ortRuntime.env.wasm.numThreads,
-      crossOriginIsolated:
-        typeof crossOriginIsolated !== "undefined" ? crossOriginIsolated : "unknown",
+      hardwareConcurrency: navigator.hardwareConcurrency,
+      crossOriginIsolated: isolated,
       hasWebGPU: typeof navigator !== "undefined" && "gpu" in navigator,
+      isProd,
       inputNames: this.session.inputNames,
       outputNames: this.session.outputNames,
     });
