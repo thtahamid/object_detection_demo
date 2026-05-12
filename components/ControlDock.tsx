@@ -44,17 +44,31 @@ export default function ControlDock({
             <div className="mb-1.5 flex items-center justify-between">
               <span className="text-xs font-medium text-muted">Model</span>
             </div>
-            <select
-              value={modelId}
-              onChange={(e) => onModelChange(e.target.value as ModelId)}
-              className="tabular hairline w-full appearance-none rounded-lg bg-surface px-3 py-2 text-xs font-medium text-fg outline-none focus:bg-surface2"
-            >
-              {models.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.file}
-                </option>
-              ))}
-            </select>
+            <div className="relative">
+              <select
+                value={modelId}
+                onChange={(e) => onModelChange(e.target.value as ModelId)}
+                className="tabular hairline block min-h-11 w-full appearance-none rounded-lg bg-surface px-3 pr-9 text-[16px] font-medium text-fg outline-none focus:bg-surface2"
+              >
+                {models.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.file}
+                  </option>
+                ))}
+              </select>
+              <svg
+                aria-hidden
+                viewBox="0 0 24 24"
+                className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M6 9l6 6 6-6" />
+              </svg>
+            </div>
           </label>
           <Slider
             label="Confidence"
