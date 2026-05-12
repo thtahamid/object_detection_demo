@@ -70,6 +70,12 @@ export class YoloDetector {
     return this.inputSize;
   }
 
+  async dispose(): Promise<void> {
+    const s = this.session as (ort.InferenceSession & { release?: () => Promise<void> }) | null;
+    if (s?.release) await s.release();
+    this.session = null;
+  }
+
   async detect(
     source: HTMLVideoElement | HTMLCanvasElement | HTMLImageElement,
     srcWidth: number,

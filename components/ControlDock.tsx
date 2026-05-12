@@ -2,6 +2,12 @@
 
 import { useState } from "react";
 import { FlipIcon, PlayIcon, SlidersIcon, StopIcon } from "@/components/Icons";
+import type { ModelId } from "@/lib/models";
+
+interface ModelOption {
+  id: ModelId;
+  file: string;
+}
 
 interface Props {
   phase: "idle" | "loading-model" | "requesting-camera" | "running" | "error";
@@ -11,6 +17,9 @@ interface Props {
   onConfidenceChange: (v: number) => void;
   iou: number;
   onIouChange: (v: number) => void;
+  models: readonly ModelOption[];
+  modelId: ModelId;
+  onModelChange: (id: ModelId) => void;
 }
 
 export default function ControlDock({
@@ -21,6 +30,9 @@ export default function ControlDock({
   onConfidenceChange,
   iou,
   onIouChange,
+  models,
+  modelId,
+  onModelChange,
 }: Props) {
   const [open, setOpen] = useState(false);
   const running = phase === "running";
@@ -30,6 +42,22 @@ export default function ControlDock({
     <div className="safe-bottom relative z-20 px-4 pt-2">
       {open && (
         <div className="hairline mb-3 space-y-4 rounded-card bg-surface/70 p-4">
+          <label className="block">
+            <div className="mb-1.5 flex items-center justify-between">
+              <span className="text-xs font-medium text-muted">Model</span>
+            </div>
+            <select
+              value={modelId}
+              onChange={(e) => onModelChange(e.target.value as ModelId)}
+              className="tabular hairline w-full appearance-none rounded-lg bg-surface px-3 py-2 text-xs font-medium text-fg outline-none focus:bg-surface2"
+            >
+              {models.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.file}
+                </option>
+              ))}
+            </select>
+          </label>
           <Slider
             label="Confidence"
             value={confidence}

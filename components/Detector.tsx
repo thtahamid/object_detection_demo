@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { YoloDetector, CLASSES, CLASS_COLORS, type Detection, type ClassName } from "@/lib/yolo";
+import { MODELS, DEFAULT_MODEL_ID, modelUrl, type ModelId } from "@/lib/models";
 import StatusBar from "@/components/StatusBar";
 import ControlDock from "@/components/ControlDock";
 import OverlayCanvas from "@/components/OverlayCanvas";
@@ -9,7 +10,8 @@ import ClassLegend from "@/components/ClassLegend";
 import ModelGate from "@/components/ModelGate";
 import { AlertIcon, CLASS_ICONS, SparkleIcon } from "@/components/Icons";
 
-const MODEL_URL = "/models/best.onnx";
+const MODEL_STORAGE_KEY = "yolo-vision:model-id";
+const isModelId = (s: string): s is ModelId => MODELS.some((m) => m.id === s);
 
 type Phase = "idle" | "loading-model" | "requesting-camera" | "running" | "error";
 
@@ -32,12 +34,27 @@ export default function Detector() {
   const [facing, setFacing] = useState<"environment" | "user">("environment");
   const [counts, setCounts] = useState<Record<ClassName, number>>(() => emptyCounts());
   const [hasModel, setHasModel] = useState<boolean | null>(null);
+  const [modelId, setModelId] = useState<ModelId>(DEFAULT_MODEL_ID);
+  const loadedModelIdRef = useRef<ModelId | null>(null);
 
   useEffect(() => {
-    fetch(MODEL_URL, { method: "HEAD" })
+    const stored = typeof window !== "undefined" ? localStorage.getItem(MODEL_STORAGE_KEY) : null;
+    if (stored && isModelId(stored)) setModelId(stored);
+  }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(MODEL_STORAGE_KEY, modelId);
+    } catch {
+      /* ignore quota / private-mode errors */
+    }
+  }, [modelId]);
+
+  useEffect(() => {
+    fetch(modelUrl(modelId), { method: "HEAD" })
       .then((r) => setHasModel(r.ok))
       .catch(() => setHasModel(false));
-  }, []);
+  }, [modelId]);
 
   const stop = useCallback(() => {
     runningRef.current = false;
@@ -52,15 +69,22 @@ export default function Detector() {
     setCounts(emptyCounts());
   }, []);
 
-  const start = useCallback(async () => {
+  const start = useCallback(async (overrideModelId?: ModelId) => {
     setErrorMsg(null);
+    const id = overrideModelId ?? modelId;
     try {
-      if (!detectorRef.current?.ready) {
+      const stale = loadedModelIdRef.current !== id;
+      if (!detectorRef.current?.ready || stale) {
+        if (stale && detectorRef.current) {
+          await detectorRef.current.dispose();
+          detectorRef.current = null;
+        }
         setPhase("loading-model");
         setModelProgress(0);
         const det = new YoloDetector();
-        await det.load(MODEL_URL, (p) => setModelProgress(p));
+        await det.load(modelUrl(id), (p) => setModelProgress(p));
         detectorRef.current = det;
+        loadedModelIdRef.current = id;
       }
 
       setPhase("requesting-camera");
@@ -88,7 +112,7 @@ export default function Detector() {
       setPhase("error");
       stop();
     }
-  }, [facing, stop]);
+  }, [facing, modelId, stop]);
 
   const loop = useCallback(async () => {
     const v = videoRef.current;
@@ -126,6 +150,17 @@ export default function Detector() {
   }, [confidence, iou]);
 
   useEffect(() => () => stop(), [stop]);
+
+  const switchModel = useCallback(
+    (nextId: ModelId) => {
+      if (nextId === modelId) return;
+      const wasRunning = runningRef.current;
+      if (wasRunning) stop();
+      setModelId(nextId);
+      if (wasRunning) setTimeout(() => start(nextId), 50);
+    },
+    [modelId, start, stop],
+  );
 
   const flipCamera = useCallback(async () => {
     const next = facing === "environment" ? "user" : "environment";
@@ -173,12 +208,15 @@ export default function Detector() {
 
       <ControlDock
         phase={phase}
-        onToggle={phase === "running" ? stop : start}
+        onToggle={phase === "running" ? stop : () => start()}
         onFlip={flipCamera}
         confidence={confidence}
         onConfidenceChange={setConfidence}
         iou={iou}
         onIouChange={setIou}
+        models={MODELS}
+        modelId={modelId}
+        onModelChange={switchModel}
       />
     </main>
   );
