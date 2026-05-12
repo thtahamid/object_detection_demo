@@ -5,6 +5,7 @@ interface Props {
   fps: number;
   inferMs: number;
   modelProgress: number;
+  title: string;
 }
 
 const PHASE = {
@@ -15,7 +16,7 @@ const PHASE = {
   error: { label: "Error", color: "#F43F5E" },
 } as const;
 
-export default function StatusBar({ phase, fps, inferMs }: Props) {
+export default function StatusBar({ phase, fps, inferMs, title }: Props) {
   const p = PHASE[phase];
   const live = phase === "running";
 
@@ -28,8 +29,8 @@ export default function StatusBar({ phase, fps, inferMs }: Props) {
             style={{ background: p.color }}
             aria-hidden
           />
-          <p className="font-display text-sm font-semibold tracking-tight">
-            YOLO·Vision
+          <p className="tabular truncate font-display text-sm font-semibold tracking-tight">
+            {title}
           </p>
           <span
             className="text-[11px] font-medium uppercase tracking-wider"

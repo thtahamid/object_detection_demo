@@ -31,7 +31,6 @@ export default function Detector() {
   const [inferMs, setInferMs] = useState(0);
   const [confidence, setConfidence] = useState(0.35);
   const [iou, setIou] = useState(0.45);
-  const [facing, setFacing] = useState<"environment" | "user">("environment");
   const [counts, setCounts] = useState<Record<ClassName, number>>(() => emptyCounts());
   const [hasModel, setHasModel] = useState<boolean | null>(null);
   const [modelId, setModelId] = useState<ModelId>(DEFAULT_MODEL_ID);
@@ -90,7 +89,6 @@ export default function Detector() {
       setPhase("requesting-camera");
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
-          facingMode: { ideal: facing },
           width: { ideal: 1280 },
           height: { ideal: 720 },
         },
@@ -112,7 +110,7 @@ export default function Detector() {
       setPhase("error");
       stop();
     }
-  }, [facing, modelId, stop]);
+  }, [modelId, stop]);
 
   const loop = useCallback(async () => {
     const v = videoRef.current;
@@ -162,25 +160,19 @@ export default function Detector() {
     [modelId, start, stop],
   );
 
-  const flipCamera = useCallback(async () => {
-    const next = facing === "environment" ? "user" : "environment";
-    setFacing(next);
-    if (phase === "running") {
-      stop();
-      setTimeout(() => {
-        setFacing(next);
-        start();
-      }, 50);
-    }
-  }, [facing, phase, start, stop]);
-
   if (hasModel === false) {
     return <ModelGate />;
   }
 
   return (
     <main className="relative flex min-h-[100dvh] flex-col bg-bg text-fg">
-      <StatusBar phase={phase} fps={fps} inferMs={inferMs} modelProgress={modelProgress} />
+      <StatusBar
+        phase={phase}
+        fps={fps}
+        inferMs={inferMs}
+        modelProgress={modelProgress}
+        title={MODELS.find((m) => m.id === modelId)?.file ?? modelId}
+      />
 
       <div className="hairline relative mx-3 flex-1 overflow-hidden rounded-card bg-bg2">
         <video
@@ -188,14 +180,12 @@ export default function Detector() {
           className="absolute inset-0 h-full w-full object-cover"
           muted
           playsInline
-          style={{ transform: facing === "user" ? "scaleX(-1)" : undefined }}
         />
 
         <OverlayCanvas
           detections={detections}
           videoWidth={videoSize.w}
           videoHeight={videoSize.h}
-          mirrored={facing === "user"}
         />
 
         {phase === "idle" && <IdleHero />}
@@ -209,7 +199,6 @@ export default function Detector() {
       <ControlDock
         phase={phase}
         onToggle={phase === "running" ? stop : () => start()}
-        onFlip={flipCamera}
         confidence={confidence}
         onConfidenceChange={setConfidence}
         iou={iou}

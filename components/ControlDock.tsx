@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { FlipIcon, PlayIcon, SlidersIcon, StopIcon } from "@/components/Icons";
+import { PlayIcon, SlidersIcon, StopIcon } from "@/components/Icons";
 import type { ModelId } from "@/lib/models";
 
 interface ModelOption {
@@ -12,7 +12,6 @@ interface ModelOption {
 interface Props {
   phase: "idle" | "loading-model" | "requesting-camera" | "running" | "error";
   onToggle: () => void;
-  onFlip: () => void;
   confidence: number;
   onConfidenceChange: (v: number) => void;
   iou: number;
@@ -25,7 +24,6 @@ interface Props {
 export default function ControlDock({
   phase,
   onToggle,
-  onFlip,
   confidence,
   onConfidenceChange,
   iou,
@@ -86,9 +84,7 @@ export default function ControlDock({
 
         <CaptureButton running={running} busy={busy} onClick={onToggle} />
 
-        <IconButton onClick={onFlip} aria-label="Flip camera">
-          <FlipIcon className="h-5 w-5" />
-        </IconButton>
+        <span className="h-11 w-11" aria-hidden />
       </div>
     </div>
   );

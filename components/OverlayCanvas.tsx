@@ -8,10 +8,9 @@ interface Props {
   detections: Detection[];
   videoWidth: number;
   videoHeight: number;
-  mirrored: boolean;
 }
 
-export default function OverlayCanvas({ detections, videoWidth, videoHeight, mirrored }: Props) {
+export default function OverlayCanvas({ detections, videoWidth, videoHeight }: Props) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   useEffect(() => {
@@ -23,12 +22,6 @@ export default function OverlayCanvas({ detections, videoWidth, videoHeight, mir
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    ctx.save();
-    if (mirrored) {
-      ctx.translate(canvas.width, 0);
-      ctx.scale(-1, 1);
-    }
 
     ctx.lineWidth = Math.max(2, Math.round(videoWidth / 400));
     ctx.font = `600 ${Math.max(14, Math.round(videoWidth / 50))}px Inter, system-ui`;
@@ -49,26 +42,12 @@ export default function OverlayCanvas({ detections, videoWidth, videoHeight, mir
       const th = (metrics.actualBoundingBoxAscent || 14) + (metrics.actualBoundingBoxDescent || 4) + padY * 2;
       const ty = Math.max(0, d.y - th);
 
-      if (mirrored) {
-        ctx.save();
-        ctx.translate(canvas.width, 0);
-        ctx.scale(-1, 1);
-        const mirroredX = canvas.width - (d.x + tw);
-        ctx.fillStyle = color;
-        ctx.fillRect(mirroredX, ty, tw, th);
-        ctx.fillStyle = "#0F172A";
-        ctx.fillText(label, mirroredX + padX, ty + padY);
-        ctx.restore();
-      } else {
-        ctx.fillStyle = color;
-        ctx.fillRect(d.x, ty, tw, th);
-        ctx.fillStyle = "#0F172A";
-        ctx.fillText(label, d.x + padX, ty + padY);
-      }
+      ctx.fillStyle = color;
+      ctx.fillRect(d.x, ty, tw, th);
+      ctx.fillStyle = "#0F172A";
+      ctx.fillText(label, d.x + padX, ty + padY);
     }
-
-    ctx.restore();
-  }, [detections, videoWidth, videoHeight, mirrored]);
+  }, [detections, videoWidth, videoHeight]);
 
   return (
     <canvas
