@@ -41,11 +41,13 @@ export class YoloDetector {
   async load(modelUrl: string, onProgress?: (pct: number) => void): Promise<void> {
     ortRuntime.env.wasm.wasmPaths = "/ort/";
     ortRuntime.env.wasm.numThreads = 1;
+    ortRuntime.env.logLevel = "error";
 
     const buf = await fetchWithProgress(modelUrl, onProgress);
     this.session = await ortRuntime.InferenceSession.create(buf, {
       executionProviders: ["webgpu", "wasm"],
       graphOptimizationLevel: "all",
+      logSeverityLevel: 3,
     });
     this.inputName = this.session.inputNames[0] ?? "images";
 
