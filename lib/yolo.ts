@@ -1,4 +1,10 @@
-import * as ort from "onnxruntime-web";
+// Deep relative path bypasses the "exports" field, which Next 15 webpack
+// interprets in a way that hides ./webgpu even though it is declared there.
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-expect-error -- runtime values only; types come from the side import below.
+import * as ortRaw from "../node_modules/onnxruntime-web/dist/ort.webgpu.bundle.min.mjs";
+import type * as ort from "onnxruntime-web";
+const ortRuntime = ortRaw as typeof ort;
 
 export const CLASSES = ["projector", "whiteboard", "fire_extinguisher", "door_sign"] as const;
 export type ClassName = (typeof CLASSES)[number];
@@ -33,15 +39,25 @@ export class YoloDetector {
   private inputSize = 640;
 
   async load(modelUrl: string, onProgress?: (pct: number) => void): Promise<void> {
-    ort.env.wasm.wasmPaths = "/ort/";
-    ort.env.wasm.numThreads = 1;
+    ortRuntime.env.wasm.wasmPaths = "/ort/";
+    ortRuntime.env.wasm.numThreads = 1;
 
     const buf = await fetchWithProgress(modelUrl, onProgress);
-    this.session = await ort.InferenceSession.create(buf, {
-      executionProviders: ["wasm"],
+    this.session = await ortRuntime.InferenceSession.create(buf, {
+      executionProviders: ["webgpu", "wasm"],
       graphOptimizationLevel: "all",
     });
     this.inputName = this.session.inputNames[0] ?? "images";
+
+    console.info("[ort]", {
+      requestedEPs: ["webgpu", "wasm"],
+      numThreads: ortRuntime.env.wasm.numThreads,
+      crossOriginIsolated:
+        typeof crossOriginIsolated !== "undefined" ? crossOriginIsolated : "unknown",
+      hasWebGPU: typeof navigator !== "undefined" && "gpu" in navigator,
+      inputNames: this.session.inputNames,
+      outputNames: this.session.outputNames,
+    });
   }
 
   get ready() {
@@ -161,7 +177,7 @@ function letterboxToTensor(
   }
 
   return {
-    tensor: new ort.Tensor("float32", data, [1, 3, size, size]),
+    tensor: new ortRuntime.Tensor("float32", data, [1, 3, size, size]),
     scale,
     padX,
     padY,
